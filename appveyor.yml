@@ -1,0 +1,69 @@
+branches:
+  only:
+    - master
+
+environment:
+  USER:
+    secure: y/JTG30ACk7z4Mfowp/PrA==
+
+  PASS:
+    #secure: gahsANd0ojRUSqBfIkNVxKL94Jo2mf3MMCDYrLj7N1A=
+    secure: isX2igm46qOUBAXSHbz8S8ZEGv1IQMtBXBxyEclfR+U=
+
+  matrix:
+  - job_name: Windows py37-x64 build
+    appveyor_build_worker_image: Visual Studio 2015
+    PYTHON: "C:/Python37-x64"
+  - job_name: Windows py37-x86 build
+    appveyor_build_worker_image: Visual Studio 2015
+    PYTHON: "C:/Python37"
+  - job_name: Windows py38-x64 build
+    appveyor_build_worker_image: Visual Studio 2015
+    PYTHON: "C:/Python38-x64"
+  - job_name: Windows py38-x86 build
+    appveyor_build_worker_image: Visual Studio 2015
+    PYTHON: "C:/Python38"
+  - job_name: Ubuntu py37 build
+    appveyor_build_worker_image: Ubuntu
+    PYTHON: "3.7"
+  - job_name: Ubuntu py38 build
+    appveyor_build_worker_image: Ubuntu
+    PYTHON: "3.8"
+  - job_name: macOS py37 build
+    appveyor_build_worker_image: macOS
+    PYTHON: "3.7"
+  - job_name: macOS py38 build
+    appveyor_build_worker_image: macOS
+    PYTHON: "3.8"
+
+stack: python %PYTHON%
+
+build_script:
+  - cmd: |
+      "%PYTHON%/python" -m pip install --upgrade pip
+      "%PYTHON%/python" -m pip install --upgrade setuptools wheel cython
+      "%PYTHON%/python" setup.py bdist_wheel
+  - sh: |
+      python -m pip install --upgrade pip
+      python -m pip install --upgrade setuptools wheel cython
+      python setup.py bdist_wheel
+      if [[ -z "${isLinux}" ]]; then
+        for wheel in $(find . -iname "*.whl") ; do 
+          mv $wheel $(echo $wheel | sed 's/-linux_/-manylinux1_/')
+        done
+      fi
+
+artifacts:
+  - path: dist\*.whl
+    name: wheels
+
+deploy_script:
+  - ps: |
+      if($env:APPVEYOR_REPO_TAG -eq 'false') {
+        Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
+        $env:Path = "$env:PYTHON;$env:PYTHON\Scripts;$env:Path"
+        Invoke-Expression "python -m pip install twine"
+        Invoke-Expression "python -m twine upload --repository testpypi -u ${Env:USER} -p ${Env:PASS} --skip-existing dist/*.whl"
+      } else {
+        Write-Output "No tag for deployment"
+      }
