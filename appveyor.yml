@@ -59,7 +59,7 @@ artifacts:
 
 deploy_script:
   - ps: |
-      if($env:APPVEYOR_REPO_TAG -eq 'false') {
+      if($env:APPVEYOR_REPO_TAG -eq 'true') {
         Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
         $env:Path = "$env:PYTHON;$env:PYTHON\Scripts;$env:Path"
         Invoke-Expression "python -m pip install twine"
